@@ -24,6 +24,42 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage });
+async function calculateWinners(contest) {
+  try {
+    if (!contest.contestants || contest.contestants.length === 0) {
+      return {
+        ...contest.toObject(),
+        winners: [],
+        isComplete: false
+      };
+    }
+
+    // Sort contestants by votes in descending order
+    const sortedContestants = [...contest.contestants].sort((a, b) => b.votes - a.votes);
+    
+    // Get the highest vote count
+    const highestVotes = sortedContestants[0].votes;
+    
+    // Find all contestants that have the highest votes (in case of a tie)
+    const winners = sortedContestants.filter(contestant => contestant.votes === highestVotes);
+
+    // Check if the contest is complete based on end date
+    const isComplete = new Date(contest.endDate) < new Date();
+
+    // Convert to plain object if it's a Mongoose document
+    const contestObj = contest.toObject ? contest.toObject() : contest;
+
+    return {
+      ...contestObj,
+      contestants: sortedContestants,
+      winners: isComplete ? winners : [],
+      isComplete
+    };
+  } catch (error) {
+    console.error("Error calculating winners:", error);
+    return contest;
+  }
+}
 
 router.post("/", auth, upload.single('coverPhoto'), async (req, res) => {
   try {
