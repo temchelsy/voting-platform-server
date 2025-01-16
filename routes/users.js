@@ -74,7 +74,7 @@ router.post("/register", registerValidator, async (req, res) => {
 
     await user.save();
 
-    const verificationUrl = `http://localhost:5173/verify-email/${verificationToken}`;
+    const verificationUrl = `https://vothub.vercel.app/verify-email/${verificationToken}`;
 
     await transporter.sendMail({
       to: user.email,
@@ -90,6 +90,44 @@ router.post("/register", registerValidator, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: "Server error", error: err.message });
+  }
+});
+
+router.post('/verify-email/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    const user = await User.findOne({
+      verificationToken: token,
+      verificationTokenExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired verification token.',
+      });
+    }
+
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    user.verificationTokenExpires = undefined;
+    await user.save();
+
+    const payload = { user: { id: user.id } };
+    const jwtToken = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
+
+    res.status(200).json({
+      success: true,
+      message: 'Email verified successfully!',
+      token: jwtToken,
+    });
+  } catch (error) {
+    console.error('Verification error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'An error occurred during verification.',
+    });
   }
 });
 
@@ -113,7 +151,7 @@ router.post("/resend-verification-code", async (req, res) => {
     user.verificationTokenExpires = verificationTokenExpires;
     await user.save();
 
-    const verificationUrl = `http://localhost:5173/verify-email/${verificationToken}`;
+    const verificationUrl = `https://vothub.vercel.app/verify-email/${verificationToken}`;
 
     await transporter.sendMail({
       to: user.email,
@@ -193,14 +231,29 @@ router.post("/refresh-token", async (req, res) => {
 
 router.get("/current-user", auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select("-password").lean();
+    console.log("Current user request received", req.user._id);
+    
+    const user = await User.findById(req.user._id).select('-password');
+    
     if (!user) {
-      return res.status(404).json({ error: "User not found" });
+      return res.status(404).json({
+        success: false,
+        error: "User not found"
+      });
     }
-    return res.status(200).json(user);
+
+    console.log("Sending user data:", user);
+    
+    res.json({
+      success: true,
+      data: user
+    });
   } catch (error) {
     console.error("Error fetching current user:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({
+      success: false,
+      error: "Error fetching user data"
+    });
   }
 });
 
@@ -249,21 +302,16 @@ router.get(
 );
 
 router.get("/profile", auth, async (req, res) => {
-  console.log("Authenticated User ID:", req.user.id); // Debug log
   try {
     const user = await User.findById(req.user.id).select("email");
     if (!user) {
-      console.error("User not found for ID:", req.user.id); // Debug log
       return res.status(404).json({ error: "User not found" });
     }
-    console.log("Fetched User:", user); // Debug log
     res.json(user);
   } catch (error) {
-    console.error("Server error:", error); // Debug log
     res.status(500).json({ error: "Server error" });
   }
 });
-
 
 
 

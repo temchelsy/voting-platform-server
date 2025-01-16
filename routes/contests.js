@@ -74,24 +74,32 @@ router.post("/", auth, upload.single('coverPhoto'), async (req, res) => {
 });
 
 
-router.get("/all", async (req, res) => {
+router.get("/all", auth, async (req, res) => {
   try {
-    const contests = await Contest.find()
-      .populate('contestants')
+    const userId = req.user._id;
+
+    const contests = await Contest.find({ userId })
+      .populate('contestants') 
       .sort({ createdAt: -1 });
-      
+
+    const processedContests = await Promise.all(
+      contests.map(contest => calculateWinners(contest))
+    );
+
     res.json({
       success: true,
-      data: contests,
+      data: processedContests,
     });
   } catch (error) {
-    console.error("Error fetching all contests:", error);
+    console.error("Error fetching user contests:", error);
     res.status(500).json({
       success: false,
       error: "Error fetching contests",
     });
   }
 });
+
+
 
 
 
