@@ -1,3 +1,4 @@
+
 import createError from 'http-errors';  
 import express from 'express';  
 import path from 'path';  
@@ -32,13 +33,13 @@ app.use(cookieParser());
 app.use(express.static(path.join(path.resolve(), 'public')));
 
 app.use(cors({
-  origin: 'https://electrify-chi.vercel.app/', 
+  origin: '*', 
   methods: ['GET', 'POST', "DELETE", "PUT", "PATCH"],
   credentials: true
 }));
 
 app.get('/', (req, res) => {
-  res.send('Welcome to the Fitness Tracker API!');
+  res.send('Welcome to the Voting-platform API!');
 });
 
 import usersRouter from './routes/users.js';  
