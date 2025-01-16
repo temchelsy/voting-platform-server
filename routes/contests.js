@@ -68,7 +68,7 @@ router.post("/", auth, upload.single('coverPhoto'), async (req, res) => {
     console.error("Error creating contest:", error);
     res.status(500).json({
       success: false,
-      error: error.message || "Error creating contest"
+      error: error.message || "Error creating contest."
     });
   }
 });
